@@ -53,8 +53,8 @@ DMA_HandleTypeDef hdma_usart1_rx;
 char UART_Received[2];
 uint8_t UART_RecFlag = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	UART_RecFlag = 1;
-	HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
+	//UART_RecFlag = 1;
+	//HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
 }
 UARTDMA_HandleTypeDef huartdma;
 char ParseBuffer[8];
@@ -122,6 +122,7 @@ int main(void)
   HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 1);
   HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, 0);
 
+  char buf[3] = {'O','N','\n'};
   //HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
   /* USER CODE END 2 */
 
@@ -134,18 +135,22 @@ int main(void)
 		  UARTDMA_GetLineFromBuffer(&huartdma, ParseBuffer);
 		  if(strcmp(ParseBuffer, "ON") == 0)
 		  {
-			  HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, GPIO_PIN_SET);
+			  HAL_GPIO_TogglePin(LED_5V_GPIO_Port, LED_5V_Pin);
 		  }
 		  else if(strcmp(ParseBuffer, "OFF")  == 0)
 		  {
-			  HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, GPIO_PIN_RESET);
+			  HAL_GPIO_TogglePin(LED_5V_GPIO_Port, LED_5V_Pin);
+		  }
+		  else {
+			  HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 0);
 		  }
 	  }
-	  //HAL_Delay(1);
+	  HAL_Delay(100);
 	  if (UART_RecFlag){
 		  UART_RecFlag = 0;
 		  //CDC_Transmit_FS(&UART_Received, 1);
 	  }
+	  HAL_UART_Transmit(&huart1, buf, 3, 1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

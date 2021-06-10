@@ -17,8 +17,10 @@
 
 void UARTDMA_UartIrqHandler(UARTDMA_HandleTypeDef *huartdma)
 {
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0); // LED_5V
 	if(huartdma->huart->Instance->ISR & UART_FLAG_IDLE)       // Check if Idle flag is set
 	{
+		huartdma->huart->Instance->ICR |= USART_ICR_IDLECF;		// Clear Idle flag
 		volatile uint32_t tmp;
 		tmp = huartdma->huart->Instance->ISR;                      // Read status register
 		tmp = huartdma->huart->Instance->RDR;                      // Read data register
@@ -29,6 +31,7 @@ void UARTDMA_UartIrqHandler(UARTDMA_HandleTypeDef *huartdma)
 
 void UARTDMA_DmaIrqHandler(UARTDMA_HandleTypeDef *huartdma)
 {
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0); // LED_5V
 	uint8_t *UartBufferPointer, *DmaBufferPointer;
 	uint32_t Length;
 	uint16_t i, TempHead;
@@ -36,7 +39,6 @@ void UARTDMA_DmaIrqHandler(UARTDMA_HandleTypeDef *huartdma)
 	typedef struct
 	{
 		__IO uint32_t ISR;   // DMA interrupt status register
-		__IO uint32_t Reserved0;
 		__IO uint32_t IFCR;  // DMA interrupt flag clear register
 	} DMA_Base_Registers;
 
