@@ -269,9 +269,6 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 
   HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
   HAL_UART_Transmit_DMA(huart, Buf, *Len);
-  //CDC_Transmit_FS(Buf, *Len);
-  //char txBuff[2] = {'H','I'};
-  //HAL_UART_Transmit_DMA(huart, txBuff, 2);
 
   return (USBD_OK);
   /* USER CODE END 6 */

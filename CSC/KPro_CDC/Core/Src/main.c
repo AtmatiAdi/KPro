@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "clock.h"
+#include "UART_DMA.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	UART_RecFlag = 1;
 	HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
 }
+UARTDMA_HandleTypeDef huartdma;
+char ParseBuffer[8];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,31 +115,40 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
+  UARTDMA_Init(&huartdma, &huart1);
   USB_UART_Connect(&huart1);
 
   HAL_GPIO_WritePin(VOUT_EN_GPIO_Port, VOUT_EN_Pin, 0);
   HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 1);
   HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, 0);
 
-  HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
-  //char txBuff[2] = {'X','D'};
+  //HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(UARTDMA_IsDataReady(&huartdma))
+	  {
+		  UARTDMA_GetLineFromBuffer(&huartdma, ParseBuffer);
+		  if(strcmp(ParseBuffer, "ON") == 0)
+		  {
+			  HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, GPIO_PIN_SET);
+		  }
+		  else if(strcmp(ParseBuffer, "OFF")  == 0)
+		  {
+			  HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, GPIO_PIN_RESET);
+		  }
+	  }
+	  //HAL_Delay(1);
+	  if (UART_RecFlag){
+		  UART_RecFlag = 0;
+		  //CDC_Transmit_FS(&UART_Received, 1);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  //HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
-	  HAL_Delay(1);
-	  if (UART_RecFlag){
-		  UART_RecFlag = 0;
-		  CDC_Transmit_FS(&UART_Received, 1);
-	  }
-	  //HAL_UART_Transmit_DMA(&huart1, txBuff, 2);
-	  //CDC_Transmit_FS(&txBuff, 1);
   }
   /* USER CODE END 3 */
 }
