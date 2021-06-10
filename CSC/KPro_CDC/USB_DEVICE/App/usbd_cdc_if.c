@@ -32,9 +32,10 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart;
-void USB_UART_Connect(UART_HandleTypeDef _huart){
-	memcpy(&huart, &_huart, sizeof(_huart));
+UART_HandleTypeDef *huart;
+void USB_UART_Connect(UART_HandleTypeDef *_huart){
+	//memcpy(&huart, &_huart, sizeof(_huart));
+	huart = _huart;
 }
 /* USER CODE END PV */
 
@@ -267,7 +268,10 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
   HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
-  HAL_UART_Transmit_DMA(&huart, Buf, Len);
+  HAL_UART_Transmit_DMA(huart, Buf, *Len);
+  //CDC_Transmit_FS(Buf, *Len);
+  //char txBuff[2] = {'H','I'};
+  //HAL_UART_Transmit_DMA(huart, txBuff, 2);
 
   return (USBD_OK);
   /* USER CODE END 6 */
@@ -294,6 +298,8 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
   }
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
   result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+
+  HAL_GPIO_TogglePin(USB_TX_DIODE_GPIO_Port, USB_TX_DIODE_Pin);
   /* USER CODE END 7 */
   return result;
 }

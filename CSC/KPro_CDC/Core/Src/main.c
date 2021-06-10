@@ -48,7 +48,12 @@ UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
-
+char UART_Received[2];
+uint8_t UART_RecFlag = 0;
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	UART_RecFlag = 1;
+	HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
+}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,7 +92,7 @@ int main(void)
   //HSE_Enable();
   //PLL_Init();
   //APB_Init();
-  USB_UART_Connect(huart1);
+
 
   /* USER CODE END Init */
 
@@ -106,9 +111,14 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
+  USB_UART_Connect(&huart1);
+
   HAL_GPIO_WritePin(VOUT_EN_GPIO_Port, VOUT_EN_Pin, 0);
   HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 1);
   HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, 0);
+
+  HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
+  //char txBuff[2] = {'X','D'};
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,7 +129,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  //HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
-	  HAL_Delay(1000);
+	  HAL_Delay(1);
+	  if (UART_RecFlag){
+		  UART_RecFlag = 0;
+		  CDC_Transmit_FS(&UART_Received, 1);
+	  }
+	  //HAL_UART_Transmit_DMA(&huart1, txBuff, 2);
+	  //CDC_Transmit_FS(&txBuff, 1);
   }
   /* USER CODE END 3 */
 }
@@ -226,7 +242,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 38400;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -258,6 +274,7 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
 }
 
 /**
