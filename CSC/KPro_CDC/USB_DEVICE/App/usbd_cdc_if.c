@@ -37,6 +37,9 @@ void USB_UART_Connect(UART_HandleTypeDef *_huart){
 	//memcpy(&huart, &_huart, sizeof(_huart));
 	huart = _huart;
 }
+uint32_t bitrate	= 	0;
+uint32_t new_bitrate=	0;
+char data = 'A';
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -183,6 +186,8 @@ static int8_t CDC_DeInit_FS(void)
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
+	// Toggle USB_RX diode in case of receiving control commands
+	//HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
   switch(cmd)
   {
     case CDC_SEND_ENCAPSULATED_COMMAND:
@@ -223,6 +228,13 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
   /*******************************************************************************/
     case CDC_SET_LINE_CODING:
+
+    	new_bitrate = (uint32_t)(pbuf[0] | (pbuf[1] << 8) | (pbuf[2] << 16) | (pbuf[3] << 24));
+    	if (bitrate != new_bitrate){
+    		// change bitrate
+    		bitrate = new_bitrate;
+    		HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
+    	}
 
     break;
 
@@ -267,8 +279,21 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
+  // Toggle USB_RX diode
   HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
-  HAL_UART_Transmit_DMA(huart, Buf, *Len);
+  // Transmit trought UART with usage of DMA all recived data
+  //HAL_UART_Transmit_DMA(huart, Buf, *Len);
+
+  // DMA flash TX buffer address
+  //DMA1_Channel4->CMAR = (uint32_t)&data;
+  // DMA flash TX buffer size
+  //DMA1_Channel4->CNDTR = 1;
+  // USART clear TC transfer complete flag
+  //USART1->ICR &= ~(USART_ICR_TCCF);
+  // Enable DMA transmitter
+  //USART1->CR3 |= (USART_CR3_DMAT);
+
+  USART1->TDR = 'A';
 
   return (USBD_OK);
   /* USER CODE END 6 */
@@ -296,6 +321,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
   result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
 
+  // Toggle USB_TX diode
   HAL_GPIO_TogglePin(USB_TX_DIODE_GPIO_Port, USB_TX_DIODE_Pin);
   /* USER CODE END 7 */
   return result;

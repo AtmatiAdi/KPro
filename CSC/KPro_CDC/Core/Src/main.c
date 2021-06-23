@@ -25,7 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "clock.h"
-#include "UART_DMA.h"
+//#include "stm32f3xx_it.h"
+//#include "UART_DMA.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,13 +51,22 @@ DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
-char UART_Received[2];
+char UART_Received[1];
 uint8_t UART_RecFlag = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	//UART_RecFlag = 1;
-	//HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
+	UART_RecFlag = 1;
+	HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
 }
-UARTDMA_HandleTypeDef huartdma;
+void my_USART1_IRQHandler(){
+	if (USART1->ISR & USART_ISR_RXNE_Msk){
+		UART_RecFlag = 1;
+		UART_Received[0] = USART1->RDR;
+		NVIC_ClearPendingIRQ(USART1_IRQn);
+	}
+
+	NVIC_ClearPendingIRQ(USART1_IRQn);
+}
+//UARTDMA_HandleTypeDef huartdma;
 char ParseBuffer[8];
 /* USER CODE END PV */
 
@@ -109,14 +119,93 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
+  //MX_DMA_Init();
   MX_SPI2_Init();
-  MX_USART1_UART_Init();
+  //MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
-  UARTDMA_Init(&huartdma, &huart1);
-  USB_UART_Connect(&huart1);
+  // Function below needs changes in DMA1_Channel5_IRQHandler and USART1_IRQHandler
+  //UARTDMA_Init(&huartdma, &huart1);
+
+  // Enable Peripheral APB2 Clock
+  //		USART1EN: USART1 clock enable
+  //		Set and cleared by software.
+  //		0: USART1 clock disabled
+  //		1: USART1 clock enabled
+  RCC->APB2ENR |= (RCC_APB2ENR_USART1EN);
+  // Enable Port clock
+  //		IOPCEN: I/O port C clock enable
+  //		Set and cleared by software.
+  //		0: I/O port C clock disabled
+  //		1: I/O port C clock enabled
+  RCC->AHBENR |= (RCC_AHBENR_GPIOCEN);
+  // Active alternate function in GPIO port
+  //		These bits are written by software to configure the I/O mode.
+  //		00: Input mode (reset state)
+  //		01: General purpose output mode
+  //		10: Alternate function mode
+  //		11: Analog mode
+  GPIOC->MODER &= ~(GPIO_MODER_MODER5_Msk | GPIO_MODER_MODER4_Msk);
+  // Set MODER as alternate function
+  GPIOC->MODER |= (0b10 << GPIO_MODER_MODER4_Pos | 0b10 << GPIO_MODER_MODER5_Pos);
+  // Alternate function mapping
+  GPIOC->AFR[0] |= (GPIO_AF7_USART1 << GPIO_AFRL_AFRL4_Pos | GPIO_AF7_USART1 << GPIO_AFRL_AFRL5_Pos );
+  // Configure full speed
+  //		These bits are written by software to configure the I/O output speed.
+  //		x0: Low speed
+  //		01: Medium speed
+  //		11: High speed
+  GPIOC->OSPEEDR |= ((0b11 << GPIO_OSPEEDER_OSPEEDR4_Pos) | (0b11 << GPIO_OSPEEDER_OSPEEDR5_Pos));
+  // Configure UART peripheral
+  USART1->CR1 &= ~(USART_CR1_M0_Msk); 			// Reset state -> Start bit, 8 data bits, n stop bits
+  USART1->CR1 &= ~(USART_CR1_OVER8_Msk);		// Reset state -> Oversampling by 16
+  uint32_t uartdiv = 72000000/9600;				// calculate baund rate
+  USART1->BRR = (((uartdiv/16) << USART_BRR_DIV_MANTISSA_Pos) | ((uartdiv%16) << USART_BRR_DIV_FRACTION_Pos));	// calculate BRR
+  USART1->CR2 &= ~(USART_CR2_STOP_Msk);			// Reset state -> 1 stop bit
+  USART1->CR1 &= ~(USART_CR1_PCE_Msk);			// Reset state -> Parity control disabled
+  // Enable RXNEIE interrupt
+  //		This bit is set and cleared by software.
+  //		0: Interrupt is inhibited
+  //		1: A USART interrupt is generated whenever ORE=1 or RXNE=1 in the USART_ISR register
+  USART1->CR1 |= (USART_CR1_RXNEIE);			// Enable RXNEIE interrupt
+  // ENABLE TXEIE interrupt
+  //USART1->CR1 |= (USART_CR1_TXEIE);
+  // USART clear TC transfer complete flag
+  //USART1->ICR &= ~(USART_ICR_TCCF);
+  // Enable USART1
+  //		0: USART prescaler and outputs disabled, low-power mode
+  //		1: USART enabled
+  USART1->CR1 |= (USART_CR1_UE);
+  // Enable Transmitter
+  //		This bit enables the transmitter. It is set and cleared by software.
+  //		0: Transmitter is disabled
+  //		1: Transmitter is enabled
+  USART1->CR1 |= (USART_CR1_TE);
+  // Enable receiving
+  //		This bit enables the receiver. It is set and cleared by software.
+  //		0: Receiver is disabled
+  //		1: Receiver is enabled and begins searching for a start bit
+  USART1->CR1 |= (USART_CR1_RE);
+  // NVIC set priority
+  NVIC_SetPriority(USART1_IRQn, 6);
+  // NVIC Enable
+  NVIC_EnableIRQ(USART1_IRQn);
+
+  // DMA1 Clock enable
+  RCC->AHBENR |= (RCC_AHBENR_DMA1EN);
+  // DMA peripheral USART TX buffer address
+  DMA1_Channel4->CPAR = (uint32_t)&USART1->TDR;
+  // Transfer direction mem to peri | Medium Priority | Memory increment enable
+  DMA1_Channel4->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PL_0);
+  // DMA start channel
+  DMA1_Channel4->CCR |= (DMA_CCR_EN);
+  // NVIC set priority
+  NVIC_SetPriority(DMA1_Channel4_IRQn, 0);
+  // NVIC Enable
+  NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+  //USB_UART_Connect(&huart1);
 
   HAL_GPIO_WritePin(VOUT_EN_GPIO_Port, VOUT_EN_Pin, 0);
   HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 1);
@@ -130,7 +219,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(UARTDMA_IsDataReady(&huartdma))
+	  /*if(UARTDMA_IsDataReady(&huartdma))
 	  {
 		  UARTDMA_GetLineFromBuffer(&huartdma, ParseBuffer);
 		  if(strcmp(ParseBuffer, "ON") == 0)
@@ -144,13 +233,28 @@ int main(void)
 		  else {
 			  HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 0);
 		  }
-	  }
-	  HAL_Delay(100);
+	  }*/
+	  HAL_Delay(1000);
+	  //uint32_t isr = USART1->ISR;
+	  //uint32_t cr1 = USART1->CR1;
+	  //USART1->TDR = 'A';
+
+	    // DMA flash TX buffer address
+		DMA1_Channel4->CMAR = (uint32_t)&buf[0];
+		// DMA flash TX buffer size
+		DMA1_Channel4->CNDTR = 1;
+		// USART clear TC transfer complete flag
+		USART1->ICR &= ~(USART_ICR_TCCF);
+		// Enable DMA transmitter
+		USART1->CR3 |= (USART_CR3_DMAT);
+
+
 	  if (UART_RecFlag){
+		  // After reciving data from UART send it throught USB
 		  UART_RecFlag = 0;
-		  //CDC_Transmit_FS(&UART_Received, 1);
+		  CDC_Transmit_FS(&UART_Received, 1);
 	  }
-	  HAL_UART_Transmit(&huart1, buf, 3, 1000);
+	  //HAL_UART_Transmit(&huart1, buf, 3, 1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

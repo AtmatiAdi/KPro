@@ -221,8 +221,8 @@ void DMA1_Channel4_IRQHandler(void)
 void DMA1_Channel5_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel5_IRQn 0 */
-	UARTDMA_DmaIrqHandler(&huartdma);
-	return;
+	//UARTDMA_DmaIrqHandler(&huartdma);
+	//return;
   /* USER CODE END DMA1_Channel5_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart1_rx);
   /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
@@ -250,7 +250,8 @@ void USB_LP_CAN_RX0_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-	UARTDMA_UartIrqHandler(&huartdma);
+	//UARTDMA_UartIrqHandler(&huartdma);
+	my_USART1_IRQHandler();
 	return;
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
