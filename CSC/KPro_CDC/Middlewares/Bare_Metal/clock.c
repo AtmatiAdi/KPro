@@ -6,7 +6,6 @@
  */
 
 #include "clock.h"
-#include "stm32f3xx_hal.h"
 
 void FLASH_ACR_clock_init(){
 	//Reset values in FLASH_ACR register
@@ -58,8 +57,45 @@ void RCC_APB1ENR_enable(){
 	// APB1 peripheral clock enable register
 	// Before using a peripheral user has to enable its clock in the RCC_AHBENR, RCC_APB2ENR or RCC_APB1ENR register.
 	// RCC_APB1ENR_PWREN < PWR clock enable
-	// RCC_APB1ENR_USBEN < USB clock enable
-	RCC->APB1ENR |= (RCC_APB1ENR_PWREN | RCC_APB1ENR_USBEN);
+	RCC->APB1ENR |= (RCC_APB1ENR_PWREN);
 	//RCC->APB2ENR |= (RCC_APB1ENR_PWREN);
 }
 
+void RCC_APB1ENR_usb_clock_enable(){
+	// APB1 peripheral clock enable register
+	// Before using a peripheral user has to enable its clock in the RCC_AHBENR, RCC_APB2ENR or RCC_APB1ENR register.
+	// RCC_APB1ENR_USBEN < USB clock enable
+	RCC->APB1ENR |= (RCC_APB1ENR_USBEN);
+	//RCC->APB2ENR |= (RCC_APB1ENR_PWREN);
+}
+
+void RCC_APB2ENR_usart_clock_enable(){
+		// Enable Peripheral APB2 Clock
+	   //		USART1EN: USART1 clock enable
+	  //		Set and cleared by software.
+	 //		0: USART1 clock disabled
+	//		1: USART1 clock enabled
+	RCC->APB2ENR |= (RCC_APB2ENR_USART1EN);
+}
+
+void RCC_AHBENR_port_enable(char port){
+	switch(port){
+	case 'C':
+		    // Enable Port clock
+		   //		IOPCEN: I/O port C clock enable
+		  //		Set and cleared by software.
+		 //		0: I/O port C clock disabled
+		//		1: I/O port C clock enabled
+		RCC->AHBENR |= (RCC_AHBENR_GPIOCEN);
+	break;
+	}
+}
+
+void RCC_AHBENR_dma_clock_enable(){
+	// DMA1 Clock enable
+	RCC->AHBENR |= (RCC_AHBENR_DMA1EN);
+}
+
+void RCC_APB2ENR_tim17_clock_enable(){
+	RCC->APB2ENR |= (RCC_APB2ENR_TIM17EN);
+}

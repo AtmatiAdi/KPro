@@ -62,8 +62,6 @@ void Error_Handler(void);
 #define SEG_D_GPIO_Port GPIOE
 #define SEG_B_Pin GPIO_PIN_3
 #define SEG_B_GPIO_Port GPIOE
-#define SEG_4_Pin GPIO_PIN_4
-#define SEG_4_GPIO_Port GPIOE
 #define SEG_A_Pin GPIO_PIN_5
 #define SEG_A_GPIO_Port GPIOE
 #define SEG_C_Pin GPIO_PIN_6
@@ -88,6 +86,24 @@ void Error_Handler(void);
 #define USB_TX_DIODE_GPIO_Port GPIOD
 #define USB_RX_DIODE_Pin GPIO_PIN_9
 #define USB_RX_DIODE_GPIO_Port GPIOD
+#define SEG_1___Pin GPIO_PIN_15
+#define SEG_1___GPIO_Port GPIOA
+#define SEG_1__Pin GPIO_PIN_10
+#define SEG_1__GPIO_Port GPIOC
+#define SEG_1_Pin GPIO_PIN_11
+#define SEG_1_GPIO_Port GPIOC
+#define SEG_2__Pin GPIO_PIN_12
+#define SEG_2__GPIO_Port GPIOC
+#define SEG_2_Pin GPIO_PIN_0
+#define SEG_2_GPIO_Port GPIOD
+#define SEG_3__Pin GPIO_PIN_8
+#define SEG_3__GPIO_Port GPIOB
+#define SEG_3_Pin GPIO_PIN_9
+#define SEG_3_GPIO_Port GPIOB
+#define SEG_4__Pin GPIO_PIN_0
+#define SEG_4__GPIO_Port GPIOE
+#define SEG_4_Pin GPIO_PIN_1
+#define SEG_4_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

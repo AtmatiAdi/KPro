@@ -33,10 +33,6 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef *huart;
-void USB_UART_Connect(UART_HandleTypeDef *_huart){
-	//memcpy(&huart, &_huart, sizeof(_huart));
-	huart = _huart;
-}
 uint32_t bitrate	= 	0;
 uint32_t new_bitrate=	0;
 char data = 'A';
@@ -234,6 +230,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
     		// change bitrate
     		bitrate = new_bitrate;
     		HAL_GPIO_TogglePin(USB_RX_DIODE_GPIO_Port, USB_RX_DIODE_Pin);
+    		DispVal(bitrate);
     	}
 
     break;
@@ -301,7 +298,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 	// DMA start channel
 	DMA1_Channel4->CCR |= (DMA_CCR_EN);
 
-  USART1->TDR = 'A';
+  //USART1->TDR = 'A';
 
   return (USBD_OK);
   /* USER CODE END 6 */
