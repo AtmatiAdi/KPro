@@ -12,10 +12,10 @@
  extern "C" {
 #endif
 
-void Clock_Flash_Init(void);
-void HSE_Enable(void);
-void PLL_Init(void);
-void APB_Init(void);
+void FLASH_ACR_clock_init(void);
+void RCC_HSE_enable(void);
+void RCC_CFGR_pll_init(void);
+void RCC_APB1ENR_enable(void);
 
 #ifdef __cplusplus
 }

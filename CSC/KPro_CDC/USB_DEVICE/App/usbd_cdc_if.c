@@ -284,14 +284,22 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   // Transmit trought UART with usage of DMA all recived data
   //HAL_UART_Transmit_DMA(huart, Buf, *Len);
 
-  // DMA flash TX buffer address
-  //DMA1_Channel4->CMAR = (uint32_t)&data;
-  // DMA flash TX buffer size
-  //DMA1_Channel4->CNDTR = 1;
-  // USART clear TC transfer complete flag
-  //USART1->ICR &= ~(USART_ICR_TCCF);
-  // Enable DMA transmitter
-  //USART1->CR3 |= (USART_CR3_DMAT);
+	    // DMA flash source buffer address
+  	   //	This register must not be written when the channel is enabled.
+	  //	Base address of the memory area from/to which the data will be read/written.
+	 //		When MSIZE is 01 (16-bit), the MA[0] bit is ignored. Access is automatically aligned to a halfword address.
+	//		When MSIZE is 10 (32-bit), MA[1:0] are ignored. Access is automatically aligned to a word address.
+	DMA1_Channel4->CMAR = (uint32_t)&Buf[0];
+		  // DMA flash source buffer size
+		 //	Number of data to be transferred (0 up to 65535). This register can only be written when the
+	    //	channel is disabled. Once the channel is enabled, this register is read-only, indicating the
+	   //	remaining bytes to be transmitted. This register decrements after each DMA transfer.
+	  //	Once the transfer is completed, this register can either stay at zero or be reloaded
+	 //		automatically by the value previously programmed if the channel is configured in circular mode.
+	//		If this register is zero, no transaction can be served whether the channel is enabled or not.
+	DMA1_Channel4->CNDTR = *Len;
+	// DMA start channel
+	DMA1_Channel4->CCR |= (DMA_CCR_EN);
 
   USART1->TDR = 'A';
 

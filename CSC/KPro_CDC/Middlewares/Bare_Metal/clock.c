@@ -8,7 +8,7 @@
 #include "clock.h"
 #include "stm32f3xx_hal.h"
 
-void Clock_Flash_Init(){
+void FLASH_ACR_clock_init(){
 	//Reset values in FLASH_ACR register
 	FLASH->ACR = 0UL;
 	// 000: Zero wait state, if 0 < HCLK ≤ 24 MHz
@@ -22,14 +22,14 @@ void Clock_Flash_Init(){
 	FLASH->ACR |= (FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY_2);
 }
 
-void HSE_Enable(){
+void RCC_HSE_enable(){
 	// HSE oscillator ON
 	RCC->CR |= RCC_CR_HSEON;
 	// The HSERDY flag indicates if the HSE oscillator is stable or not
 	while (!(RCC->CR & RCC_CR_HSERDY)) {};
 }
 
-void PLL_Init(){
+void RCC_CFGR_pll_init(){
 	//>>__PLL CONFIGURATION__<<
 	// Disable the PLL by setting PLLON to 0
 	RCC->CR &= ~(RCC_CR_PLLON);
@@ -54,7 +54,7 @@ void PLL_Init(){
 	while (!(RCC->CFGR & RCC_CFGR_SWS_PLL)) {};
 }
 
-void APB_Init(){
+void RCC_APB1ENR_enable(){
 	// APB1 peripheral clock enable register
 	// Before using a peripheral user has to enable its clock in the RCC_AHBENR, RCC_APB2ENR or RCC_APB1ENR register.
 	// RCC_APB1ENR_PWREN < PWR clock enable

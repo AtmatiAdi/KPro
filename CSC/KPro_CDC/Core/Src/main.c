@@ -53,18 +53,29 @@ DMA_HandleTypeDef hdma_usart1_rx;
 /* USER CODE BEGIN PV */
 char UART_Received[1];
 uint8_t UART_RecFlag = 0;
+char msg[3] = {'X','D','D'};
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	UART_RecFlag = 1;
+
 	HAL_UART_Receive_IT(&huart1, &UART_Received, 1);
 }
 void my_USART1_IRQHandler(){
+	uint32_t isr = USART1->ISR;
+	uint32_t cr1 = USART1->CR1;
 	if (USART1->ISR & USART_ISR_RXNE_Msk){
 		UART_RecFlag = 1;
 		UART_Received[0] = USART1->RDR;
 		NVIC_ClearPendingIRQ(USART1_IRQn);
 	}
-
 	NVIC_ClearPendingIRQ(USART1_IRQn);
+}
+void my_DMA1_Channel4_IRQHandler(){
+	if (DMA1->ISR & DMA_ISR_TCIF4){
+		DMA1->IFCR |= (DMA_IFCR_CTCIF4);
+	}
+	// Disable DMA channel
+	DMA1_Channel4->CCR &= ~(DMA_CCR_EN);
+	NVIC_ClearPendingIRQ(DMA1_Channel4_IRQn);
 }
 //UARTDMA_HandleTypeDef huartdma;
 char ParseBuffer[8];
@@ -102,16 +113,16 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
-  //Clock_Flash_Init();
-  //HSE_Enable();
-  //PLL_Init();
-  //APB_Init();
+  FLASH_ACR_clock_init();
+  RCC_HSE_enable();
+  RCC_CFGR_pll_init();
+  RCC_APB1ENR_enable();
 
 
   /* USER CODE END Init */
 
   /* Configure the system clock */
-  SystemClock_Config();
+  //SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
@@ -128,82 +139,160 @@ int main(void)
   // Function below needs changes in DMA1_Channel5_IRQHandler and USART1_IRQHandler
   //UARTDMA_Init(&huartdma, &huart1);
 
-  // Enable Peripheral APB2 Clock
-  //		USART1EN: USART1 clock enable
-  //		Set and cleared by software.
-  //		0: USART1 clock disabled
+      // Enable Peripheral APB2 Clock
+     //		USART1EN: USART1 clock enable
+    //		Set and cleared by software.
+   //		0: USART1 clock disabled
   //		1: USART1 clock enabled
   RCC->APB2ENR |= (RCC_APB2ENR_USART1EN);
-  // Enable Port clock
-  //		IOPCEN: I/O port C clock enable
-  //		Set and cleared by software.
-  //		0: I/O port C clock disabled
+      // Enable Port clock
+     //		IOPCEN: I/O port C clock enable
+    //		Set and cleared by software.
+   //		0: I/O port C clock disabled
   //		1: I/O port C clock enabled
   RCC->AHBENR |= (RCC_AHBENR_GPIOCEN);
-  // Active alternate function in GPIO port
-  //		These bits are written by software to configure the I/O mode.
-  //		00: Input mode (reset state)
-  //		01: General purpose output mode
-  //		10: Alternate function mode
+       // Active alternate function in GPIO port
+      //	These bits are written by software to configure the I/O mode.
+     //		00: Input mode (reset state)
+    //		01: General purpose output mode
+   //		10: Alternate function mode
   //		11: Analog mode
   GPIOC->MODER &= ~(GPIO_MODER_MODER5_Msk | GPIO_MODER_MODER4_Msk);
   // Set MODER as alternate function
   GPIOC->MODER |= (0b10 << GPIO_MODER_MODER4_Pos | 0b10 << GPIO_MODER_MODER5_Pos);
   // Alternate function mapping
   GPIOC->AFR[0] |= (GPIO_AF7_USART1 << GPIO_AFRL_AFRL4_Pos | GPIO_AF7_USART1 << GPIO_AFRL_AFRL5_Pos );
-  // Configure full speed
-  //		These bits are written by software to configure the I/O output speed.
-  //		x0: Low speed
-  //		01: Medium speed
+      // Configure full speed
+     //		These bits are written by software to configure the I/O output speed.
+    //		x0: Low speed
+   //		01: Medium speed
   //		11: High speed
   GPIOC->OSPEEDR |= ((0b11 << GPIO_OSPEEDER_OSPEEDR4_Pos) | (0b11 << GPIO_OSPEEDER_OSPEEDR5_Pos));
-  // Configure UART peripheral
-  USART1->CR1 &= ~(USART_CR1_M0_Msk); 			// Reset state -> Start bit, 8 data bits, n stop bits
-  USART1->CR1 &= ~(USART_CR1_OVER8_Msk);		// Reset state -> Oversampling by 16
-  uint32_t uartdiv = 72000000/9600;				// calculate baund rate
+  	  // Configure Parity
+     //		This bit selects the hardware parity control (generation and detection)
+    //		0: Parity control disabled
+   //		1: Parity control enabled
+  //		This bit field can only be written when the USART is disabled (UE=0)
+  USART1->CR1 &= ~(USART_CR1_PCE_Msk);
+       // Configure word length
+      //	This bit, with bit 12 (M0), determines the word length. It is set or cleared by software.
+     //		M[1:0] = 00: 1 Start bit, 8 data bits, n stop bits
+    //		M[1:0] = 01: 1 Start bit, 9 data bits, n stop bits
+   //		M[1:0] = 10: 1 Start bit, 7 data bits, n stop bits
+  //		This bit can only be written when the USART is disabled (UE=0).
+  USART1->CR1 &= ~(USART_CR1_M0_Msk);
+     // Configure oversampling
+    //		0: Oversampling by 16
+   //		1: Oversampling by 8
+  //		This bit can only be written when the USART is disabled (UE=0).
+  USART1->CR1 &= ~(USART_CR1_OVER8_Msk);
+  // Calculate baund rate
+  uint32_t uartdiv = 72000000/9600;
   USART1->BRR = (((uartdiv/16) << USART_BRR_DIV_MANTISSA_Pos) | ((uartdiv%16) << USART_BRR_DIV_FRACTION_Pos));	// calculate BRR
+        // Configure stop bits
+       //	These bits are used for programming the stop bits.
+      //	00: 1 stop bit
+     //		01: 0.5 stop bit
+    //		10: 2 stop bits
+   //		11: 1.5 stop bits
+  //		This bit field can only be written when the USART is disabled (UE=0).
   USART1->CR2 &= ~(USART_CR2_STOP_Msk);			// Reset state -> 1 stop bit
-  USART1->CR1 &= ~(USART_CR1_PCE_Msk);			// Reset state -> Parity control disabled
-  // Enable RXNEIE interrupt
-  //		This bit is set and cleared by software.
-  //		0: Interrupt is inhibited
+     // Enable RXNEIE interrupt
+    //		This bit is set and cleared by software.
+   //		0: Interrupt is inhibited
   //		1: A USART interrupt is generated whenever ORE=1 or RXNE=1 in the USART_ISR register
   USART1->CR1 |= (USART_CR1_RXNEIE);			// Enable RXNEIE interrupt
-  // ENABLE TXEIE interrupt
-  //USART1->CR1 |= (USART_CR1_TXEIE);
-  // USART clear TC transfer complete flag
-  //USART1->ICR &= ~(USART_ICR_TCCF);
-  // Enable USART1
-  //		0: USART prescaler and outputs disabled, low-power mode
-  //		1: USART enabled
-  USART1->CR1 |= (USART_CR1_UE);
-  // Enable Transmitter
-  //		This bit enables the transmitter. It is set and cleared by software.
-  //		0: Transmitter is disabled
-  //		1: Transmitter is enabled
-  USART1->CR1 |= (USART_CR1_TE);
-  // Enable receiving
-  //		This bit enables the receiver. It is set and cleared by software.
-  //		0: Receiver is disabled
+     // Enable receiving
+    //		This bit enables the receiver. It is set and cleared by software.
+   //		0: Receiver is disabled
   //		1: Receiver is enabled and begins searching for a start bit
   USART1->CR1 |= (USART_CR1_RE);
+     // Enable DMA transmitter
+    //		This bit is set/reset by software
+   //		1: DMA mode is enabled for transmission
+  //		0: DMA mode is disabled for transmission
+  USART1->CR3 |= (USART_CR3_DMAT);
+     // Enable Transmitter
+    //		This bit enables the transmitter. It is set and cleared by software.
+   //		0: Transmitter is disabled
+  //		1: Transmitter is enabled
+  USART1->CR1 |= (USART_CR1_TE);
+      // Enable USART1
+     //		0: USART prescaler and outputs disabled, low-power mode
+    //		1: USART enabled
+   //		The DMA requests are also reset when UE = 0 so the DMA channel must be disabled
+  //		before resetting the UE bit.
+  USART1->CR1 |= (USART_CR1_UE);
+  // USART clear TC transfer complete flag
+  USART1->ICR &= ~(USART_ICR_TCCF);
+
+  // DMA1 Clock enable
+  RCC->AHBENR |= (RCC_AHBENR_DMA1EN);
+  // DMA1 Clear control register
+  DMA1_Channel4->CCR = 0;
+  // Wait until DMA is disabled
+  while(DMA1_Channel4->CCR & (DMA_CCR_EN));
+     // Enable Transfer complete interrupt
+    //		This bit is set and cleared by software.
+   //		0: TC interrupt disabled
+  //		1: TC interrupt enabled
+  DMA1_Channel4->CCR |= (DMA_CCR_TCIE);
+     // Memory increment mode enable
+    //		This bit is set and cleared by software.
+   //		0: Memory increment mode disabled
+  //		1: Memory increment mode enabled
+  DMA1_Channel4->CCR |= (DMA_CCR_MINC);
+     // Transfer direction mem to peri
+    //		This bit is set and cleared by software.
+   //		0: Read from peripheral
+  //		1: Read from memory
+  DMA1_Channel4->CCR |= (DMA_CCR_DIR);
+       // Medium Priority
+      //	These bits are set and cleared by software.
+     //		00: Low
+    //		01: Medium
+   //		10: High
+  //		11: Very high
+  DMA1_Channel4->CCR |= (DMA_CCR_PL_0);
+      // DMA peripheral USART TX buffer address
+     //		This register must not be written when the channel is enabled.
+    //		Base address of the peripheral data register from/to which the data will be read/written.
+   //		When PSIZE is 01 (16-bit), the PA[0] bit is ignored. Access is automatically aligned to a halfword address.
+  //		When PSIZE is 10 (32-bit), PA[1:0] are ignored. Access is automatically aligned to a word address.
+  DMA1_Channel4->CPAR = (uint32_t)&USART1->TDR;
+
+  // ENABLE TXEIE interrupt
+  //USART1->CR1 |= (USART_CR1_TXEIE);
+
   // NVIC set priority
   NVIC_SetPriority(USART1_IRQn, 6);
   // NVIC Enable
   NVIC_EnableIRQ(USART1_IRQn);
 
-  // DMA1 Clock enable
-  RCC->AHBENR |= (RCC_AHBENR_DMA1EN);
-  // DMA peripheral USART TX buffer address
-  DMA1_Channel4->CPAR = (uint32_t)&USART1->TDR;
-  // Transfer direction mem to peri | Medium Priority | Memory increment enable
-  DMA1_Channel4->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_PL_0);
-  // DMA start channel
-  DMA1_Channel4->CCR |= (DMA_CCR_EN);
   // NVIC set priority
   NVIC_SetPriority(DMA1_Channel4_IRQn, 0);
   // NVIC Enable
   NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+
+
+  // DMA flash source buffer address
+   //	This register must not be written when the channel is enabled.
+//	Base address of the memory area from/to which the data will be read/written.
+//		When MSIZE is 01 (16-bit), the MA[0] bit is ignored. Access is automatically aligned to a halfword address.
+//		When MSIZE is 10 (32-bit), MA[1:0] are ignored. Access is automatically aligned to a word address.
+//DMA1_Channel4->CMAR = (uint32_t)&msg[0];
+	  // DMA flash source buffer size
+	 //	Number of data to be transferred (0 up to 65535). This register can only be written when the
+  //	channel is disabled. Once the channel is enabled, this register is read-only, indicating the
+ //	remaining bytes to be transmitted. This register decrements after each DMA transfer.
+//	Once the transfer is completed, this register can either stay at zero or be reloaded
+//		automatically by the value previously programmed if the channel is configured in circular mode.
+//		If this register is zero, no transaction can be served whether the channel is enabled or not.
+//DMA1_Channel4->CNDTR = 3;
+// DMA start channel
+//DMA1_Channel4->CCR |= (DMA_CCR_EN);
+
 
   //USB_UART_Connect(&huart1);
 
@@ -234,21 +323,10 @@ int main(void)
 			  HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 0);
 		  }
 	  }*/
-	  HAL_Delay(1000);
+	  //HAL_Delay(1000);
 	  //uint32_t isr = USART1->ISR;
 	  //uint32_t cr1 = USART1->CR1;
 	  //USART1->TDR = 'A';
-
-	    // DMA flash TX buffer address
-		DMA1_Channel4->CMAR = (uint32_t)&buf[0];
-		// DMA flash TX buffer size
-		DMA1_Channel4->CNDTR = 1;
-		// USART clear TC transfer complete flag
-		USART1->ICR &= ~(USART_ICR_TCCF);
-		// Enable DMA transmitter
-		USART1->CR3 |= (USART_CR3_DMAT);
-
-
 	  if (UART_RecFlag){
 		  // After reciving data from UART send it throught USB
 		  UART_RecFlag = 0;
