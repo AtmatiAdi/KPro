@@ -26,3 +26,39 @@ void GPIOC_MODER_pc4_pc5_uart_init(){
 	//		11: High speed
 	GPIOC->OSPEEDR |= ((0b11 << GPIO_OSPEEDER_OSPEEDR4_Pos) | (0b11 << GPIO_OSPEEDER_OSPEEDR5_Pos));
 }
+
+void GPIO_MODER_set_mode(char port, uint16_t pin, uint8_t mode){
+	switch(port){
+	case 'A':{
+		GPIOA->MODER &= ~(0b11 << pin);
+		GPIOA->MODER |=  (mode << pin);
+		break;
+	}
+	case 'B':{
+		GPIOB->MODER &= ~(0b11 << pin);
+		GPIOB->MODER |=  (mode << pin);
+		break;
+	}
+	case 'C':{
+		GPIOC->MODER &= ~(0b11 << pin);
+		GPIOC->MODER |=  (mode << pin);
+		break;
+	}
+	case 'D':{
+		GPIOD->MODER &= ~(0b11 << pin);
+		GPIOD->MODER |=  (mode << pin);
+		break;
+	}
+	case 'E':{
+		GPIOE->MODER &= ~(0b11 << pin);
+		GPIOE->MODER |=  (mode << pin);
+		break;
+	}
+	case 'F':{
+		GPIOF->MODER &= ~(0b11 << pin);
+		GPIOF->MODER |=  (mode << pin);
+		break;
+	}
+	}
+
+}

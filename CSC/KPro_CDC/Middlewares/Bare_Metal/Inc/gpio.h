@@ -15,7 +15,7 @@
 #include "stm32f3xx_hal.h"
 
 void GPIOC_MODER_pc4_pc5_uart_init(void);
-
+void GPIO_MODER_set_mode(char port, uint16_t pin, uint8_t mode);
 
 
 #ifdef __cplusplus

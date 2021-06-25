@@ -80,8 +80,16 @@ void RCC_APB2ENR_usart_clock_enable(){
 
 void RCC_AHBENR_port_enable(char port){
 	switch(port){
-	case 'C':
-		    // Enable Port clock
+	case 'A':{
+		RCC->AHBENR |= (RCC_AHBENR_GPIOAEN);
+		break;
+	}
+	case 'B':{
+		RCC->AHBENR |= (RCC_AHBENR_GPIOBEN);
+		break;
+	}
+	case 'C':{
+			// Enable Port clock
 		   //		IOPCEN: I/O port C clock enable
 		  //		Set and cleared by software.
 		 //		0: I/O port C clock disabled
@@ -89,6 +97,20 @@ void RCC_AHBENR_port_enable(char port){
 		RCC->AHBENR |= (RCC_AHBENR_GPIOCEN);
 	break;
 	}
+	case 'D':{
+		RCC->AHBENR |= (RCC_AHBENR_GPIODEN);
+		break;
+	}
+	case 'E':{
+		RCC->AHBENR |= (RCC_AHBENR_GPIOEEN);
+		break;
+	}
+	case 'F':{
+		RCC->AHBENR |= (RCC_AHBENR_GPIOFEN);
+		break;
+	}
+	}
+
 }
 
 void RCC_AHBENR_dma_clock_enable(){

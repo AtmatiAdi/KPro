@@ -54,6 +54,12 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void my_USART1_IRQHandler();
+void my_DMA1_Channel4_IRQHandler();
+void my_TIM1_TRG_COM_TIM17_IRQHandler();
+void SetDisp(uint8_t seg);
+void DispNum(uint8_t num, uint8_t disp);
+void DispVal(uint32_t val);
 
 /* USER CODE END EFP */
 

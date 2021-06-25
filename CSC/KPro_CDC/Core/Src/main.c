@@ -28,6 +28,7 @@
 #include "clock.h"
 #include "gpio.h"
 #include "dma.h"
+#include "tim.h"
 //#include "stm32f3xx_it.h"
 //#include "UART_DMA.h"
 /* USER CODE END Includes */
@@ -279,21 +280,21 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
+  	// CONFIGURE CLOCK
 	FLASH_ACR_clock_init();
 	RCC_HSE_enable();
 	RCC_CFGR_pll_init();
 	RCC_APB1ENR_enable();
 	RCC_APB1ENR_usb_clock_enable();
 
+	// HALL INITALIZERS
 		MX_GPIO_Init();
-		MX_SPI2_Init();
 		MX_USB_DEVICE_Init();
-		MX_FATFS_Init();
 
+	// USART INITALIZATION
 	RCC_APB2ENR_usart_clock_enable();
 	RCC_AHBENR_port_enable('C');
 	GPIOC_MODER_pc4_pc5_uart_init();
-
 	USART1_CR1_disable_parity();
 	USART1_CR1_world_8b();
 	USART1_CR1_oversampling_16();
@@ -306,6 +307,7 @@ int main(void)
 	USART1_CR1_enable();
 	USART1_ICR_clear_tansfer_completec_flag();
 
+	// DMA FOR USART INITRALIZATION
 	RCC_AHBENR_dma_clock_enable();
 	DMA1_Channel4_CCR_uart_init();
 	DMA1_Channel4_CPAR_set_tdr_buffer();
@@ -316,29 +318,18 @@ int main(void)
 	NVIC_SetPriority(DMA1_Channel4_IRQn, 0);
 	NVIC_EnableIRQ(DMA1_Channel4_IRQn);
 
+	// TIMER 17 INITALIZATION
 	RCC_APB2ENR_tim17_clock_enable();
 	NVIC_SetPriority(TIM17_IRQn, 3);
 	NVIC_EnableIRQ(TIM17_IRQn);
-	// Disbale timer
-	TIM17->CR1 &= ~(TIM_CR1_CEN);
-	// Reset timer
-	RCC->APB2RSTR |= (RCC_APB2RSTR_TIM17RST);
-	RCC->APB2RSTR &= ~(RCC_APB2RSTR_TIM17RST);
-	// Set prescaller
-	TIM17->PSC = (72000 - 1);
-	TIM17->ARR = (20 -1);
-	// Reset timer and apply settings
-	TIM17->EGR |= (TIM_EGR_UG);
-	// Enable update interrupt
-	TIM17->DIER |= (TIM_DIER_UIE);
-	// Enable timer
-	TIM17->CR1 |= TIM_CR1_CEN;
+	TIM17_CR1_reset_timer17();
+	TIM17_PSC_set_presc_period(72000 - 1, 20 -1);
+	TIM17_DIER_enable_update_interrupt();
+	TIM17_CR1_enable();
 
 	HAL_GPIO_WritePin(VOUT_EN_GPIO_Port, VOUT_EN_Pin, 0);
 	HAL_GPIO_WritePin(V_SEL_GPIO_Port, V_SEL_Pin, 1);
 	HAL_GPIO_WritePin(LED_5V_GPIO_Port, LED_5V_Pin, 0);
-
-	uint32_t val = 0;
 
 	while(1){
 		if (UART_RecFlag){
@@ -346,12 +337,6 @@ int main(void)
 			UART_RecFlag = 0;
 			CDC_Transmit_FS(&UART_Received, 1);
 		}
-		//HAL_Delay(1);
-
-		//val++;
-		//if (num > 11) num = 0;
-		//
-
 	}
 
   /* USER CODE END Init */
